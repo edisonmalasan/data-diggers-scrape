@@ -18,7 +18,6 @@ from __future__ import annotations
 
 import argparse
 import csv
-import hashlib
 import json
 import re
 import sys
@@ -27,90 +26,25 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))
 ROOT = HERE.parents[1]
 DATA_CSV = ROOT / "data" / "staging_jobstreet.csv"  # staged; merge_staging folds it into raw
 STORAGE = HERE / ".storage"
 SLUGS_FILE = STORAGE / "jobstreet_slugs.json"
 DONE_FILE = STORAGE / "jobstreet_done.json"
 
-COLUMNS = [
-    "review_id", "company_name", "job_title", "department",
-    "seniority_level", "employment_status", "review_date", "rating",
-    "review_text", "pros", "cons", "location",
-    "source_platform", "source_url", "scraped_at",
-]
-
-# ---- CS/IT gate (word-boundary aware; group convention from collect.py) ----
-# Positive: title must contain a CS/IT phrase. Bare 'engineer'/'developer-in-name'
-# is NOT enough (Mechanical/Civil engineers are not CS/IT) — needs a CS/IT qualifier.
-CS_IT_RE = re.compile(
-    r"\b("
-    r"software|programmer|programming|coding|developer|webdev|"
-    r"front-?end|back-?end|full-?stack|"
-    r"data scientist|data analyst|data engineer|data analytics|analytics|"
-    r"machine learning|deep learning|artificial intelligence|\bai\b|nlp|"
-    r"information technology|\bit\b|"
-    r"systems? analyst|systems? administrator|systems? programmer|"
-    r"network engineer|network administrator|network analyst|network specialist|computer operator|"
-    r"cyber ?security|information security|security analyst|security engineer|penetration tester|"
-    r"devops|site reliability|\bsre\b|cloud engineer|cloud architect|aws|azure|gcp|"
-    r"\bqa\b|quality assurance|tester|test engineer|automation tester|"
-    r"database|\bdba\b|\bsql\b|"
-    r"ui/?ux|ux designer|product analyst|business analyst|"
-    r"technical support|help ?desk|service desk|desktop support|application support|support analyst|"
-    r"solutions architect|solution architect|technical architect|infrastructure|"
-    r"(software|computer|system|network|it|platform|security|validation|quality|telecom) engineer|"
-    r"sap |oracle |salesforce|blockchain|game developer|robotics"
-    r")(?=\s|$|,|/|-|and\b|,)",
-    re.I,
+# Schema and record gates live in gates.py (single source of truth). They are
+# re-exported here so the many modules that do
+# `from scrape_jobstreet import CS_IT_RE, is_ph_location` keep working.
+from gates import (  # noqa: E402
+    COLUMNS,
+    CS_IT_EXCLUDE,
+    CS_IT_RE,
+    NON_PH_LOC_RE,
+    PH_RE,
+    is_ph_location,
+    make_id,
 )
-# Hard rejects: unmistakably non-CS/IT professions (checked against the title).
-# (Bare 'engineer'/'architect' need no exclusion — CS_IT_RE only matches
-# CS-qualified forms like 'software engineer', so 'Mechanical Engineer' fails
-# the positive gate on its own.)
-CS_IT_EXCLUDE = re.compile(
-    r"mechanical|electrical|civil|chemical|industrial|mechatronic|"
-    r"production|manufacturing|maintenance|quality control inspector|"
-    r"nurse|accountant|cashier|driver|waiter|cook|security guard|"
-    r"marketing|sales|account executive|customer service|call center|"
-    r"\bhr\b|human resource|recruiter|finance|payroll|legal|administrative|"
-    r"supply chain|warehouse|logistics|purchasing|procurement|teacher",
-    re.I,
-)
-
-# ---- PH gate (location must name a PH place/region) ----
-PH_RE = re.compile(
-    r"philippines|metro manila|manila|makati|taguig|quezon city|pasig|mandaluyong|"
-    r"pasay|paranaque|marikina|caloocan|las piñas|las pinas|muntinlupa|valenzuela|"
-    r"san juan|pateros|cebu|davao|iloilo|bacolod|cagayan de oro|zamboanga|baguio|"
-    r"(?<!los )angeles|pampanga|bulacan|cavite|laguna|batangas|rizal|tarlac|nueva ecija|zambales|"
-    r"pangasinan|benguet|ilocos|la union|pampanga|clark|subic|alabang|ortigas|bonifacio|"
-    r"bgc|northgate|filinvest|up technohub|iloilo|bacolod|dumaguete|iloilo|"
-    r"calabarzon|central luzon|central visayas|western visayas|davao region|"
-    r"caraga|region \w+|mindanao|visayas|luzon|bicol|pampanga|ilocos|cagayan|"
-    r"zamboanga peninsula|northern mindanao|soccsksargen|barmm|bangsamoro|"
-    r"philippine|naga|bacolod|butuan|tacurong|general santos|tagum|digos|"
-    r"olongapo|sta\.? rosa|lipa|batangas city|iloilo city|cebu city|davao city",
-    re.I,
-)
-
-# Defense-in-depth: explicit US/foreign location markers. Guards against PH_RE
-# false positives (e.g. "Los Angeles, CA" matching the "angeles" token).
-NON_PH_LOC_RE = re.compile(
-    r",\s*(A[LKSZEP]|C[AOT]|D[CE]|FL|GA|HI|I[ADLN]|K[SY]|LA|M[ADEINOST]|N[CHJMV]|O[KR]|"
-    r"P[AR]|RI|S[CD]|T[NX]|UT|V[TFA]|W[AVY])\.?\s*$"
-    r"|\bunited states\b|\busa\b|\bcalifornia\b|los angeles|new york|"
-    r"\bsingapore\b|\bindia\b|\bmalaysia\b|\bindonesia\b|\bvietnam\b|\bthailand\b",
-    re.I,
-)
-
-
-def is_ph_location(loc: str | None) -> bool:
-    """True only when the location names a PH place and not a foreign one."""
-    if not loc:
-        return False
-    return bool(PH_RE.search(loc)) and not NON_PH_LOC_RE.search(loc)
-
 
 DATE_RE = re.compile(r"\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+20\d{2}\b")
 TENURE_RE = re.compile(
@@ -173,11 +107,6 @@ JS_PARSE = r"""() => {
                    [null, ''])[1].trim();
   return {company, reviews: out};
 }"""
-
-
-def make_id(company: str, title: str, date: str, text: str, url: str) -> str:
-    raw = "|".join([company, title, date, text[:120], url]).encode("utf-8")
-    return "rv_" + hashlib.sha1(raw).hexdigest()[:12]
 
 
 def parse_review(raw: dict, company: str, url: str, now: str) -> dict | None:
