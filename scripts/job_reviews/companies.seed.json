@@ -1,0 +1,12 @@
+[
+  {"company": "Accenture", "platform": "indeed", "url": "https://ph.indeed.com/cmp/Accenture/reviews?fjobtitle=Software+Engineer"},
+  {"company": "IBM", "platform": "indeed", "url": "https://ph.indeed.com/cmp/IBM/reviews?fjobtitle=Software+Engineer"},
+  {"company": "Infosys", "platform": "indeed", "url": "https://ph.indeed.com/cmp/Infosys/reviews?fjobtitle=Software+Engineer"},
+  {"company": "Cognizant", "platform": "indeed", "url": "https://ph.indeed.com/cmp/Cognizant/reviews?fjobtitle=Software+Engineer"},
+  {"company": "DXC Technology", "platform": "indeed", "url": "https://ph.indeed.com/cmp/DXC-Technology/reviews?fjobtitle=Software+Engineer"},
+  {"company": "Globe Telecom", "platform": "indeed", "url": "https://ph.indeed.com/cmp/Globe-Telecom/reviews?fjobtitle=IT"},
+  {"company": "SMART Communications", "platform": "indeed", "url": "https://ph.indeed.com/cmp/Smart-Communications/reviews?fjobtitle=IT"},
+  {"company": "UnionBank", "platform": "indeed", "url": "https://ph.indeed.com/cmp/UnionBank-of-the-Philippines/reviews?fjobtitle=IT"},
+  {"company": "Accenture", "platform": "glassdoor", "url": "https://www.glassdoor.com/Reviews/Accenture-Manila-Reviews-EI_IE4138.0,9_10,16.htm"},
+  {"company": "IBM", "platform": "glassdoor", "url": "https://www.glassdoor.com/Reviews/IBM-Manila-Reviews-EI_IE354.0,3_10,16.htm"}
+]

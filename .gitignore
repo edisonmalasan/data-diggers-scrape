@@ -1,0 +1,33 @@
+# Python bytecode / caches
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Packaging / tooling caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Editors / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Local secrets — never commit
+.env
+*.key
+
+# Scraping working directory: HTML dumps, run logs, resume-state JSON.
+# Also holds live Chrome profiles with session cookies — never commit.
+scripts/job_reviews/.storage/
+
